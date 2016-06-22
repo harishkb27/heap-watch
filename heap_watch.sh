@@ -1,24 +1,27 @@
 #!/bin/bash
-# @author: Harish Bujanga
-# @email: harish.bujanga@mapofmedicine.com
+# @author: Harish K B
+# @email: harish.kb27@gmail.com
 
-if [[ "$#" -ne 4 && "$#" -ne 6 ]]; then
-	echo "usage: `basename $0` -b <path/to/java/bin> -t <mail-recipient> -f <yes to get report even if heap space is normal>"
-	exit
+function usage {
+	echo "usage: `basename $0` -b <path/to/java/bindir> [-t <mail-recipient>] [-i to receive emails with heap conditions being normal]"
+        exit
+}
+
+if [[ "$#" -ne 2 && "$#" -ne 4 && "$#" -ne 5 ]]; then
+	usage
 fi
 
 INFO="no"
-while getopts ":b:t:f:" opt;do
+while getopts ":b:t:i" opt;do
 	case $opt in
 	  b) JAVA_BIN_DIR="$OPTARG"
 	  ;;
 	  t) RECPT="$OPTARG"
 	  ;;
-	  f) INFO="$OPTARG"
+	  i) INFO="yes"
 	  ;;
 	  \?) echo "Invalid option -$OPTARG" >&2;
-	      echo "usage: `basename $0` -b <path/to/java/bin> -t <mail-recipient> -f <yes to get report even if heap space is normal>"
-	      exit
+	      usage
 	  ;;
 	esac	
 done
@@ -31,7 +34,7 @@ fi
 HEAP_WATCH_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 HEAP_WATCH_AWK=$HEAP_WATCH_HOME/heap_watch.awk
 JAMP=$JAVA_BIN_DIR/jmap
-MAIL_HDR="Subject: $HOSTNAME heap space alert"$'\nFROM: heapwatch@mapofmedicine.com\nMIME-Version: 1.0\nContent-Type: text/html;charset="us-ascii"\n\n'
+MAIL_HDR="Subject: $HOSTNAME heap space alert"$'\nFROM: heapwatch@example.com\nMIME-Version: 1.0\nContent-Type: text/html;charset="us-ascii"\n\n'
 HOLDER_HTML="$( cat "$HEAP_WATCH_HOME/holder.html" )"
 
 for i in `ps aux |grep java | awk '{print $2;}'`;do 
@@ -42,5 +45,7 @@ for i in `ps aux |grep java | awk '{print $2;}'`;do
 		ps="`date`"$'\n'"$( ps $i | awk '!/TTY/ {print $(NF-2);}' )"$'\n\n'
 		mail_cont="$MAIL_HDR"${HOLDER_HTML/heap_watch_input/"$ps""$stats"}
 		echo "$mail_cont" | sendmail "$RECPT"
+	else
+		echo "$stats"
 	fi
 done
